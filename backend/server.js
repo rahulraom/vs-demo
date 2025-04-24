@@ -1,17 +1,25 @@
-const express = require('express')
-const bodyParser = require('body-parser')
 const { agent } = require('./index')
 
-const app = express()
-app.use(bodyParser.json())
-
-app.post('/verify', async (req, res) => {
+app.post('/issue', async (req, res) => {
   try {
-    const result = await agent.verifyCredential({ credential: req.body.vc })
-    res.json({ valid: result.verified })
-  } catch {
-    res.json({ valid: false })
+    const identifier = await agent.didManagerGetOrCreate({ alias: 'issuer' })
+
+    const verifiableCredential = await agent.createVerifiableCredential({
+      credential: {
+        issuer: { id: identifier.did },  // ✅ Now it's a managed DID!
+        credentialSubject: {
+          id: 'did:example:123',
+          name: 'Rahul Rao',
+          course: 'VC Basics'
+        }
+      },
+      proofFormat: 'jwt',
+      save: false
+    })
+
+    res.json(verifiableCredential)
+  } catch (err) {
+    console.error(err)
+    res.status(500).send('Error issuing VC')
   }
 })
-
-app.listen(3000, () => console.log("VC verifier running on port 3000"))
